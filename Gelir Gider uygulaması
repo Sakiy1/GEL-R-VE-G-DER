@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelir Gider Takip Uygulaması</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #4338ca;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 40px;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .nav-tabs {
+            display: flex;
+            background-color: white;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            flex-shrink: 0;
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .container {
+            padding: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .summary-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-box h4 {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .summary-box p {
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4b5563;
+        }
+
+        input, select, textarea {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:active {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f9fafb;
+            color: #374151;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .filter-container select {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>Gelir & Gider Takip</header>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('genel')">Genel Özet</button>
+        <button class="nav-tab" onclick="switchTab('dukkan')">Dükkan</button>
+        <button class="nav-tab" onclick="switchTab('karapinar')">Karapınar</button>
+        <button class="nav-tab" onclick="switchTab('konya')">Konya</button>
+        <button class="nav-tab" onclick="switchTab('toptanci')">Toptancılar</button>
+    </div>
+
+    <div class="container">
+
+        <!-- GENEL ÖZET SEKMESİ -->
+        <div id="genel" class="tab-content active">
+            <div class="card">
+                <h3>Genel Hesap Özeti</h3>
+                <div class="filter-container" style="margin-top: 10px;">
+                    <select id="genelFiltre" onchange="renderGenel()">
+                        <option value="gunluk">Günlük</option>
+                        <option value="haftalik">Haftalık</option>
+                        <option value="aylik">Aylık</option>
+                        <option value="tumu">Tümü</option>
+                    </select>
+                </div>
+                <div class="summary-grid" style="margin-top: 12px;">
+                    <div class="summary-box">
+                        <h4>Toplam Gelir</h4>
+                        <p id="genelGelir" class="text-success">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Toplam Gider</h4>
+                        <p id="genelGider" class="text-danger">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Net Bakiye</h4>
+                        <p id="genelNet">0 TL</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Tüm İşlem Geçmişi</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Yer</th>
+                                <th>Açıklama</th>
+                                <th>Tür</th>
+                                <th>Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="genelIslemListesi">
+                            <!-- Dinamik doldurulacak -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- DÜKKAN SEKMESİ -->
+        <div id="dukkan" class="tab-content">
+            <div class="card">
+                <h3>Dükkan İşlemi Ekle</h3>
+                <form onsubmit="islemEkle(event, 'Dükkan')">
+                    <div class="form-group">
+                        <label>İşlem Türü</label>
+                        <select id="dukkanTur">
+                            <option value="gelir">Gelir (+)</option>
+                            <option value="gider">Gider (-)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tutar (TL)</label>
+                        <input type="number" id="dukkanTutar" placeholder="Örn: 200" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <input type="text" id="dukkanAciklama" placeholder="Örn: Günlük kasa satışı">
+                    </div>
+                    <button type="submit" class="btn">Kaydet</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <h4>Gelir</h4>
+                        <p id="dukkanGelir" class="text-success">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Gider</h4>
+                        <p id="dukkanGider" class="text-danger">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Net</h4>
+                        <p id="dukkanNet">0 TL</p>
+                    </div>
+                </div>
+                <h3>Dükkan Hareketleri</h3>
+                <table>
+                    <thead>
+                        <tr><th>Tarih</th><th>Açıklama</th><th>Tutar</th><th>Sil</th></tr>
+                    </thead>
+                    <tbody id="dukkanListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- KARAPINAR SEKMESİ -->
+        <div id="karapinar" class="tab-content">
+            <div class="card">
+                <h3>Karapınar Pazarı İşlem Ekle</h3>
+                <form onsubmit="islemEkle(event, 'Karapınar')">
+                    <div class="form-group">
+                        <label>İşlem Türü</label>
+                        <select id="karapinarTur">
+                            <option value="gelir">Gelir (+)</option>
+                            <option value="gider">Gider (-)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tutar (TL)</label>
+                        <input type="number" id="karapinarTutar" placeholder="Örn: 500" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <input type="text" id="karapinarAciklama" placeholder="Örn: Pazar tezgah satışı">
+                    </div>
+                    <button type="submit" class="btn">Kaydet</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <h4>Gelir</h4>
+                        <p id="karapinarGelir" class="text-success">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Gider</h4>
+                        <p id="karapinarGider" class="text-danger">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Net</h4>
+                        <p id="karapinarNet">0 TL</p>
+                    </div>
+                </div>
+                <h3>Karapınar Hareketleri</h3>
+                <table>
+                    <thead>
+                        <tr><th>Tarih</th><th>Açıklama</th><th>Tutar</th><th>Sil</th></tr>
+                    </thead>
+                    <tbody id="karapinarListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- KONYA SEKMESİ -->
+        <div id="konya" class="tab-content">
+            <div class="card">
+                <h3>Konya Pazarı İşlem Ekle</h3>
+                <form onsubmit="islemEkle(event, 'Konya')">
+                    <div class="form-group">
+                        <label>İşlem Türü</label>
+                        <select id="konyaTur">
+                            <option value="gelir">Gelir (+)</option>
+                            <option value="gider">Gider (-)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tutar (TL)</label>
+                        <input type="number" id="konyaTutar" placeholder="Örn: 1000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Açıklama</label>
+                        <input type="text" id="konyaAciklama" placeholder="Örn: Tezgah cirosu">
+                    </div>
+                    <button type="submit" class="btn">Kaydet</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="summary-grid">
+                    <div class="summary-box">
+                        <h4>Gelir</h4>
+                        <p id="konyaGelir" class="text-success">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Gider</h4>
+                        <p id="konyaGider" class="text-danger">0 TL</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Net</h4>
+                        <p id="konyaNet">0 TL</p>
+                    </div>
+                </div>
+                <h3>Konya Hareketleri</h3>
+                <table>
+                    <thead>
+                        <tr><th>Tarih</th><th>Açıklama</th><th>Tutar</th><th>Sil</th></tr>
+                    </thead>
+                    <tbody id="konyaListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TOPTANCI REÇETESİ SEKMESİ -->
+        <div id="toptanci" class="tab-content">
+            <div class="card">
+                <h3>Toptancı Alım Reçetesi</h3>
+                <form onsubmit="toptanciEkle(event)">
+                    <div class="form-group">
+                        <label>Malzeme Açıklaması / Reçete</label>
+                        <input type="text" id="toptanciAciklama" placeholder="Örn: 10 top Şenev marka kumaş" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Toplam Tutar (TL)</label>
+                        <input type="number" id="toptanciTutar" placeholder="Örn: 12500" required>
+                    </div>
+                    <button type="submit" class="btn">Reçete Kaydet</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Alım Reçeteleri Listesi</h3>
+                <table>
+                    <thead>
+                        <tr><th>Tarih</th><th>Açıklama</th><th>Tutar</th><th>Sil</th></tr>
+                    </thead>
+                    <tbody id="toptanciListe"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Uygulama Veri Deposu
+        let veriler = JSON.parse(localStorage.getItem('gelirGiderVerileri')) || {
+            islem: [],
+            toptanci: []
+        };
+
+        function kaydetVeGuncelle() {
+            localStorage.setItem('gelirGiderVerileri', JSON.stringify(veriler));
+            ekranlariGuncelle();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function islemEkle(event, yer) {
+            event.preventDefault();
+            const tur = document.getElementById(yer.toLowerCase() + 'Tur').value;
+            const tutar = parseFloat(document.getElementById(yer.toLowerCase() + 'Tutar').value);
+            const aciklama = document.getElementById(yer.toLowerCase() + 'Aciklama').value || 'Açıklama yok';
+            const tarih = new Date().toISOString();
+
+            veriler.islem.unshift({ id: Date.now(), yer, tur, tutar, aciklama, tarih });
+            
+            // Formu temizle
+            document.getElementById(yer.toLowerCase() + 'Tutar').value = '';
+            document.getElementById(yer.toLowerCase() + 'Aciklama').value = '';
+
+            kaydetVeGuncelle();
+        }
+
+        function toptanciEkle(event) {
+            event.preventDefault();
+            const aciklama = document.getElementById('toptanciAciklama').value;
+            const tutar = parseFloat(document.getElementById('toptanciTutar').value);
+            const tarih = new Date().toISOString();
+
+            veriler.toptanci.unshift({ id: Date.now(), aciklama, tutar, tarih });
+
+            document.getElementById('toptanciAciklama').value = '';
+            document.getElementById('toptanciTutar').value = '';
+
+            kaydetVeGuncelle();
+        }
+
+        function veriSil(id, tip) {
+            if(tip === 'islem') {
+                veriler.islem = veriler.islem.filter(item => item.id !== id);
+            } else {
+                veriler.toptanci = veriler.toptanci.filter(item => item.id !== id);
+            }
+            kaydetVeGuncelle();
+        }
+
+        function tarihFiltrele(islemListesi, filtreTuru) {
+            const simdi = new Date();
+            return islemListesi.filter(item => {
+                const itemTarih = new Date(item.tarih);
+                if (filtreTuru === 'gunluk') {
+                    return itemTarih.toDateString() === simdi.toDateString();
+                } else if (filtreTuru === 'haftalik') {
+                    const birHaftaOnce = new Date();
+                    birHaftaOnce.setDate(simdi.getDate() - 7);
+                    return itemTarih >= birHaftaOnce;
+                } else if (filtreTuru === 'aylik') {
+                    return itemTarih.getMonth() === simdi.getMonth() && itemTarih.getFullYear() === simdi.getFullYear();
+                }
+                return true; // 'tumu'
+            });
+        }
+
+        function ekranlariGuncelle() {
+            // Lokasyon bazlı güncelleme fonksiyonu
+            function guncelleLokasyon(yerAdi) {
+                const listeEl = document.getElementById(yerAdi.toLowerCase() + 'Liste');
+                const yerIslemleri = veriler.islem.filter(i => i.yer === yerAdi);
+                
+                let gelir = 0, gider = 0;
+                let html = '';
+
+                yerIslemleri.forEach(item => {
+                    if(item.tur === 'gelir') gelir += item.tutar;
+                    else gider += item.tutar;
+
+                    html += `<tr>
+                        <td>${new Date(item.tarih).toLocaleDateString()}</td>
+                        <td>${item.aciklama}</td>
+                        <td class="${item.tur === 'gelir' ? 'text-success' : 'text-danger'}">${item.tur === 'gelir' ? '+' : '-'}${item.tutar} TL</td>
+                        <td><button class="btn btn-danger" onclick="veriSil(${item.id}, 'islem')">Sil</button></td>
+                    </tr>`;
+                });
+
+                listeEl.innerHTML = html;
+                document.getElementById(yerAdi.toLowerCase() + 'Gelir').innerText = gelir + ' TL';
+                document.getElementById(yerAdi.toLowerCase() + 'Gider').innerText = gider + ' TL';
+                document.getElementById(yerAdi.toLowerCase() + 'Net').innerText = (gelir - gider) + ' TL';
+            }
+
+            guncelleLokasyon('Dükkan');
+            guncelleLokasyon('Karapınar');
+            guncelleLokasyon('Konya');
+
+            // Toptancı listesi
+            let toptanciHtml = '';
+            let toptanciToplam = 0;
+            veriler.toptanci.forEach(item => {
+                toptanciToplam += item.tutar;
+                toptanciHtml += `<tr>
+                    <td>${new Date(item.tarih).toLocaleDateString()}</td>
+                    <td>${item.aciklama}</td>
+                    <td class="text-danger">-${item.tutar} TL</td>
+                    <td><button class="btn btn-danger" onclick="veriSil(${item.id}, 'toptanci')">Sil</button></td>
+                </tr>`;
+            });
+(
