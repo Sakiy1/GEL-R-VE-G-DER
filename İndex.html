@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gelir-Gider Takip</title>
+  <style>
+    /* --- Temel Tasarım ve Mobil Öncelik --- */
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      color: #222;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h2 {
+      margin-top: 0; 
+      font-weight: 600;
+      font-size: 1.4rem;
+    }
+    /* Ana konteyner */
+    .container {
+      flex: 1;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 10px 15px 60px;
+      background: white;
+      box-shadow: 0 3px 8px rgb(0 0 0 / 0.1);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      min-height: 80vh;
+    }
+    /* Sekme butonları */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+      user-select: none;
+    }
+    .tab-btn {
+      background: #eee;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 5px 5px 0 0;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background-color 0.25s;
+      flex: 1 1 110px;
+      max-width: 160px;
+      text-align: center;
+    }
+    .tab-btn.active {
+      background: #0059b3;
+      color: white;
+      font-weight: 700;
+    }
+    /* Sekme içerikleri */
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+    }
+    .tab-content.active {
+      display: flex;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      gap: 10px;
+    }
+    input[type=text], input[type=number], select {
+      padding: 7px 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      flex: 1 1 150px;
+      font-size: 1rem;
+    }
+    button.submit-btn {
+      background: #007acc;
+      color: white;
+      font-weight: 600;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 14px;
+      cursor: pointer;
+      flex: 1 1 100px;
+      max-width: 130px;
+      transition: background-color 0.3s;
+    }
+    button.submit-btn:hover {
+      background: #005999;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #f0f0f0;
+    }
+    td .delete-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background-color 0.2s;
+    }
+    td .delete-btn:hover {
+      background: #bc3a2a;
+    }
+    .totals {
+      margin-top: auto;
+      padding-top: 8px;
+      border-top: 1px solid #ccc;
+      font-weight: 700;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .totals div {
+      font-size: 1.1rem;
+    }
+    /* Genel Özet filtreler */
+    .filter-group {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-group label {
+      font-weight: 600;
+    }
+    select.filter-select {
+      padding: 6px 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      max-width: 160px;
+      cursor: pointer;
+    }
+    /* Responsive */
+    @media (max-width: 600px) {
+      form {
+        flex-direction: column;
+      }
+      .tab-btn {
+        max-width: 100%;
+      }
+      .totals {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- Sekme Butonları -->
+    <div class="tabs" role="tablist" aria-label="Gelir-Gider Sekmeleri">
+      <button class="tab-btn active" data-tab="dukkan" role="tab" aria-selected="true" aria-controls="dukkan-tab" id="dukkan-tab-btn">Dükkan</button>
+      <button class="tab-btn" data-tab="karapinar" role="tab" aria-selected="false" aria-controls="karapinar-tab" id="karapinar-tab-btn">Karapınar</button>
+      <button class="tab-btn" data-tab="konya" role="tab" aria-selected="false" aria-controls="konya-tab" id="konya-tab-btn">Konya</button>
+      <button class="tab-btn" data-tab="toptanci" role="tab" aria-selected="false" aria-controls="toptanci-tab" id="toptanci-tab-btn">Toptancı</button>
+      <button class="tab-btn" data-tab="genelozet" role="tab" aria-selected="false" aria-controls="genelozet-tab" id="genelozet-tab-btn">Genel Özet</button>
+    </div>
+
+    <!-- Dükkan Sekmesi -->
+    <section id="dukkan-tab" class="tab-content active" role="tabpanel" aria-labelledby="dukkan-tab-btn">
+      <h2>Dükkan İşlemleri</h2>
+      <form id="dukkan-form" aria-label="Dükkan yeni işlem formu">
+        <input type="text" id="dukkan-description" placeholder="Açıklama" required autocomplete="off" />
+        <input type="number" id="dukkan-price" placeholder="Fiyat (TL)" min="0.01" step="0.01" required />
+        <select id="dukkan-type" required aria-label="Gelir veya Gider seçin">
+          <option value="" disabled selected>Tür</option>
+          <option value="gelir">Gelir</option>
+          <option value="gider">Gider</option>
+        </select>
+        <button class="submit-btn" type="submit">Ekle</button>
+      </form>
+      <table aria-label="Dükkan işlemleri listesi" id="dukkan-list-table">
+        <thead>
+          <tr><th>Açıklama</th><th>Fiyat (TL)</th><th>Tür</th><th>Tarih</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="totals">
+        <div>Toplam Gelir: <span id="dukkan-total-gelir">0</span> TL</div>
+        <div>Toplam Gider: <span id="dukkan-total-gider">0</span> TL</div>
+      </div>
+    </section>
+
+    <!-- Karapınar Sekmesi -->
+    <section id="karapinar-tab" class="tab-content" role="tabpanel" aria-labelledby="karapinar-tab-btn">
+      <h2>Karapınar İşlemleri</h2>
+      <form id="karapinar-form" aria-label="Karapınar yeni işlem formu">
+        <input type="text" id="karapinar-description" placeholder="Açıklama" required autocomplete="off" />
+        <input type="number" id="karapinar-price" placeholder="Fiyat (TL)" min="0.01" step="0.01" required />
+        <select id="karapinar-type" required aria-label="Gelir veya Gider seçin">
+          <option value="" disabled selected>Tür</option>
+          <option value="gelir">Gelir</option>
+          <option value="gider">Gider</option>
+        </select>
+        <button class="submit-btn" type="submit">Ekle</button>
+      </form>
+      <table aria-label="Karapınar işlemleri listesi" id="karapinar-list-table">
+        <thead>
+          <tr><th>Açıklama</th><th>Fiyat (TL)</th><th>Tür</th><th>Tarih</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="totals">
+        <div>Toplam Gelir: <span id="karapinar-total-gelir">0</span> TL</div>
+        <div>Toplam Gider: <span id="karapinar-total-gider">0</span> TL</div>
+      </div>
+    </section>
+
+    <!-- Konya Sekmesi -->
+    <section id="konya-tab" class="tab-content" role="tabpanel" aria-labelledby="konya-tab-btn">
+      <h2>Konya İşlemleri</h2>
+      <form id="konya-form" aria-label="Konya yeni işlem formu">
+        <input type="text" id="konya-description" placeholder="Açıklama" required autocomplete="off" />
+        <input type="number" id="konya-price" placeholder="Fiyat (TL)" min="0.01" step="0.01" required />
+        <select id="konya-type" required aria-label="Gelir veya Gider seçin">
+          <option value="" disabled selected>Tür</option>
+          <option value="gelir">Gelir</option>
+          <option value="gider">Gider</option>
+        </select>
+        <button class="submit-btn" type="submit">Ekle</button>
+      </form>
+      <table aria-label="Konya işlemleri listesi" id="konya-list-table">
+        <thead>
+          <tr><th>Açıklama</th><th>Fiyat (TL)</th><th>Tür</th><th>Tarih</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="totals">
+        <div>Toplam Gelir: <span id="konya-total-gelir">0</span> TL</div>
+        <div>Toplam Gider: <span id="konya-total-gider">0</span> TL</div>
+      </div>
+    </section>
+
+    <!-- Toptancı Sekmesi -->
+    <section id="toptanci-tab" class="tab-content" role="tabpanel" aria-labelledby="toptanci-tab-btn">
+      <h2>Toptancı Giderleri</h2>
+      <form id="toptanci-form" aria-label="Toptancı yeni gider formu">
+        <input type="text" id="toptanci-description" placeholder="Açıklama" required autocomplete="off" />
+        <input type="number" id="toptanci-price" placeholder="Fiyat (TL)" min="0.01" step="0.01" required />
+        <select id="toptanci-category" required aria-label="Kategori seçin">
+          <option value="" disabled selected>Kategori</option>
+          <option value="Kumaş">Kumaş</option>
+          <option value="Perde">Perde</option>
+          <option value="Dikiş İpi">Dikiş İpi</option>
+          <option value="Makine Parçası">Makine Parçası</option>
+          <option value="Diğer">Diğer</option>
+        </select>
+        <button class="submit-btn" type="submit">Ekle</button>
+      </form>
+      <table aria-label="Toptancı giderleri listesi" id="toptanci-list-table">
+        <thead>
+          <tr><th>Açıklama</th><th>Fiyat (TL)</th><th>Kategori</th><th>Tarih</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="totals">
+        <div>Toplam Gider: <span id="toptanci-total-gider">0</span> TL</div>
+      </div>
+    </section>
+
+    <!-- Genel Özet Sekmesi -->
+    <section id="genelozet-tab" class="tab-content" role="tabpanel" aria-labelledby="genelozet-tab-btn">
+      <h2>Genel Özet</h2>
+      <div class="filter-group">
+        <label for="genelozet-filter">Filtrele:</label>
+        <select id="genelozet-filter" class="filter-select" aria-label="Günlük, Haftalık veya Aylık filtre seçin">
+          <option value="gunluk" selected>Günlük</option>
+          <option value="haftalik">Haftalık</option>
+          <option value="aylik">Aylık</option>
+        </select>
+      </div>
+
+      <h3>Toplam Gelirler</h3>
+      <table aria-label="Genel toplam gelirler" id="genelozet-gelir-table">
+        <thead>
+          <tr><th>Tarih</th><th>Tutar (TL)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Toplam Giderler</h3>
+      <table aria-label="Genel toplam giderler" id="genelozet-gider-table">
+        <thead>
+          <tr><th>Tarih</th><th>Tutar (TL)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+    </section>
+
+  </div>
+
+  <script>
+    (() => {
+      // Veri anahtarları
+      const STORAGE_KEYS = {
+        dukkan: "gelirGider_dukkan",
+        karapinar: "gelirGider_karapinar",
+        konya: "gelirGider_konya",
+        toptanci: "gelirGider_toptanci"
+      };
+
+      // Sayfa elemanları
+      const tabs = document.querySelectorAll(".tab-btn");
+      const tabContents = document.querySelectorAll(".tab-content");
+      
+      // Genel Özet filtre seçeneği
+      const genelFilter = document.getElementById("genelozet-filter");
+
+      // Yardımcı: UUID oluşturucu (basit)
+      function generateId() {
+        return 'id-' + Math.random().toString(36).substring(2, 12);
+      }
+
+      // Tarih formatlama (YYYY-MM-DD HH:MM)
+      function formatDateTime(dateStr) {
+        let d = new Date(dateStr);
+        if (isNaN(d)) return "";
+        const pad2 = n => n.toString().padStart(2, '0');
+        return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      }
+
+      // Tarih için sadece YYYY-MM-DD formatı (filtre için)
+      function formatDate(dateStr) {
+        let d = new Date(dateStr);
+        if (isNaN(d)) return "";
+        const pad2 = n => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+      }
+
+      // Veri kaydetme ve okuma
+      function loadData(key) {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        try {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr)) return arr;
+          return [];
+        } catch {
+          return [];
+        }
+      }
+      function saveData(key, arr) {
+        localStorage.setItem(key, JSON.stringify(arr));
+      }
+
+      // Silme Onayı
+      function confirmDelete() {
+        return confirm("Emin misiniz?");
+      }
+
+      // Tablar arası geçiş
+      tabs.forEach(tabBtn => {
+        tabBtn.addEventListener("click", () => {
+          const target = tabBtn.dataset.tab;
+          tabs.forEach(t => {
+            t.classList.toggle("active", t.dataset.tab === target);
+            t.setAttribute("aria-selected", t.dataset.tab === target ? "true" : "false");
+          });
+          tabContents.forEach(tc => {
+            tc.classList.toggle("active", tc.id === target + "-tab");
+          });
+          if(target === "genelozet"){
+            refreshGenelOzet();
+          }
+        });
+      });
+
+      // Ortak fonksiyon: Tab veri gösterme (dukkan, karapinar, konya)
+      function renderGelirGiderTab(key) {
+        const list = loadData(STORAGE_KEYS[key]);
+        const tbody = document.querySelector(`#${key}-list-table tbody`);
+        tbody.innerHTML = "";
+
+        let toplamGelir = 0;
+        let toplamGider = 0;
+
+        list.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item.description}</td>
+            <td>${item.price.toFixed(2)}</td>
+            <td>${item.type === "gelir" ? "Gelir" : "Gider"}</td>
+            <td>${formatDateTime(item.date)}</td>
+            <td><button class="delete-btn" aria-label="İşlemi sil" data-id="${item.id}">Sil</button></td>
+          `;
+          tbody.appendChild(tr);
+
+          if(item.type === "gelir") toplamGelir += item.price;
+          else if(item.type === "gider") toplamGider += item.price;
+        });
+
+        // Silme işlemi
+        tbody.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            if(confirmDelete()){
+              const id = btn.dataset.id;
+              const updatedList = list.filter(i => i.id !== id);
+              saveData(STORAGE_KEYS[key], updatedList);
+              renderGelirGiderTab(key);
+            }
+          });
+        });
+
+        // Toplamları göster
+        document.getElementById(`${key}-total-gelir`).textContent = toplamGelir.toFixed(2);
+        document.getElementById(`${key}-total-gider`).textContent = toplamGider.toFixed(2);
+      }
+
+      // Ortak form işleme fonksiyonu (Dükkan, Karapınar, Konya)
+      function setupGelirGiderForm(key) {
+        const form = document.getElementById(`${key}-form`);
+        form.addEventListener("submit", e => {
+          e.preventDefault();
+          // Değerleri al
+          const desc = form.querySelector(`#${key}-description`).value.trim();
+          const priceRaw = form.querySelector(`#${key}-price`).value.trim();
+          const price = parseFloat(priceRaw);
+          const type = form.querySelector(`#${key}-type`).value;
+
+          if(!desc || !price || price <= 0 || (type !== "gelir" && type !== "gider")){
+            alert("Lütfen doğru ve eksiksiz bilgi girin.");
+            return;
+          }
+
+          const list = loadData(STORAGE_KEYS[key]);
+
+          list.push({
+            id: generateId(),
+            description: desc,
+            price,
+            type,
+            date: new Date().toISOString()
+          });
+          saveData(STORAGE_KEYS[key], list);
+          form.reset();
+          renderGelirGiderTab(key);
+        });
+      }
+
+      // Toptancı sekmesi render
+      function renderToptanciTab(){
+        const list = loadData(STORAGE_KEYS.toptanci);
+        const tbody = document.querySelector("#toptanci-list-table tbody");
+        tbody.innerHTML = "";
+
+        let toplamGider = 0;
+        list.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item.description}</td>
+            <td>${item.price.toFixed(2)}</td>
+            <td>${item.category}</td>
+            <td>${formatDateTime(item.date)}</td>
+            <td><button class="delete-btn" aria-label="İşlemi sil" data-id="${item.id}">Sil</button></td>
+          `;
+          tbody.appendChild(tr);
+          toplamGider += item.price;
+        });
+
+        // Silme işlemi
+        tbody.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", () => {
+            if(confirmDelete()){
+              const id = btn.dataset.id;
+              const updatedList = list.filter(i => i.id !== id);
+              saveData(STORAGE_KEYS.toptanci, updatedList);
+              renderToptanciTab();
+            }
+          });
+        });
+
+        // Toplam göster
+        document.getElementById("toptanci-total-gider").textContent = toplamGider.toFixed(2);
+      }
+
+      // Toptancı form işlemi
+      function setupToptanciForm(){
+        const form = document.getElementById("toptanci-form");
+        form.addEventListener("submit", e => {
+          e.preventDefault();
+
+          const desc = form.querySelector("#toptanci-description").value.trim();
+          const priceRaw = form.querySelector("#toptanci-price").value.trim();
+          const price = parseFloat(priceRaw);
+          const category = form.querySelector("#toptanci-category").value;
+
+          if(!desc || !price || price <= 0 || !category){
+            alert("Lütfen doğru ve eksiksiz bilgi girin.");
+            return;
+          }
+          const list = loadData(STORAGE_KEYS.toptanci);
+          list.push({
+            id: generateId(),
+            description: desc,
+            price,
+            category,
+            date: new Date().toISOString()
+          });
+          saveData(STORAGE_KEYS.toptanci, list);
+          form.reset();
+          renderToptanciTab();
+        });
+      }
+
+      // Genel Özet sekmesi için veri toplama ve filtreleme
+      function refreshGenelOzet(){
+        const filterType = genelFilter.value; // gunluk, haftalik, aylik
+
+        // Tüm gelir-gider listelerini al
+        const dukkan = loadData(STORAGE_KEYS.dukkan);
+        const karapinar = loadData(STORAGE_KEYS.karapinar);
+        const konya = loadData(STORAGE_KEYS.konya);
+
+        // Gelir ve giderleri ayır, tarih > filtre uygula
+        const allGelir = [];
+        const allGider = [];
+
+        // Yardımcı tarih formatlama - filtre için
+        function getFilterId(dateISO){
+          const d = new Date(dateISO);
+          if(isNaN(d)) return null;
+          const y = d.getFullYear();
+          const m = d.getMonth()+1;
+          const day = d.getDate();
+
+          if(filterType === "gunluk"){
+            return `${y}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+          } else if(filterType === "haftalik"){
+            // Hafta numarası - hafta Pazartesi başlar olarak hesapla
+            let firstDayOfYear = new Date(y,0,1);
+            let pastDaysOfYear = (d - firstDayOfYear)/(24*60*60*1000);
+            let weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay()+1)/7);
+            return `${y}-W${weekNumber}`;
+          } else if(filterType === "aylik"){
+            return `${y}-${String(m).padStart(2,"0")}`;
+          }
+          return null;
+        }
+
+        // Verileri gruplandırmak için map objesi oluştur
+        const gelirMap = new Map();
+        const giderMap = new Map();
+
+        function addToMap(map, key, value){
+          if(!map.has(key)){
+            map.set(key, 0);
+          }
+          map.set(key, map.get(key)+value);
+        }
+
+        // Tüm listeleri birleştir ve ayrıştır
+        [dukkan, karapinar, konya].forEach(sectionList => {
+          sectionList.forEach(item => {
+            const id = getFilterId(item.date);
+            if(!id) return;
+            if(item.type === "gelir"){
+              addToMap(gelirMap, id, item.price);
+                          } else if(item.type === "gider"){
+              addToMap(giderMap, id, item.price);
+            }
+          });
+        });
+
+        // Toptancı verilerini de genel giderlere dahil et
+        const toptanci = loadData(STORAGE_KEYS.toptanci);
+        toptanci.forEach(item => {
+          const id = getFilterId(item.date);
+          if(!id) return;
+          addToMap(giderMap, id, item.price);
+        });
+
+        // Map objelerini diziye çevirip tarihe göre sıralayarak tabloya basma
+        function renderSummaryTable(dataMap, tableId) {
+          const tbody = document.querySelector(`#${tableId} tbody`);
+          tbody.innerHTML = "";
+
+          // Anahtarları (Tarih/Hafta/Ay) ters alfabetik sırala (En yeni en üstte)
+          const sortedKeys = Array.from(dataMap.keys()).sort((a, b) => b.localeCompare(a));
+
+          if (sortedKeys.length === 0) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td colspan="2">Kayıt bulunamadı</td>`;
+            tbody.appendChild(tr);
+            return;
+          }
+
+          sortedKeys.forEach(key => {
+            const total = dataMap.get(key);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td><strong>${key}</strong></td>
+              <td>${total.toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+
+        renderSummaryTable(gelirMap, "genelozet-gelir-table");
+        renderSummaryTable(giderMap, "genelozet-gider-table");
+      }
+
+      // Filtre değiştiğinde Genel Özet tablolarını güncelle
+      genelFilter.addEventListener("change", refreshGenelOzet);
+
+      // Sayfa yüklendiğinde çalışacak başlangıç ayarları
+      function init() {
+        // Form dinleyicilerini başlat
+        setupGelirGiderForm("dukkan");
+        setupGelirGiderForm("karapinar");
+        setupGelirGiderForm("konya");
+        setupToptanciForm();
+
+        // Tabloların ilk hallerini çiz
+        renderGelirGiderTab("dukkan");
+        renderGelirGiderTab("karapinar");
+        renderGelirGiderTab("konya");
+        renderToptanciTab();
+        
+        // Genel özeti arka planda hesapla
+        refreshGenelOzet();
+      }
+
+      // Uygulamayı başlat
+      init();
+
+    })();
+  </script>
+</body>
+</html>
